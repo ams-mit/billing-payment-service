@@ -17,8 +17,13 @@ public class JwtTokenProvider {
     private final SecretKey signingKey;
 
     public JwtTokenProvider(@Value("${app.jwt.secret}") String jwtSecret) {
-        // Derive a consistent HMAC-SHA256 key from the configured secret
-        this.signingKey = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+        if (jwtSecret == null || jwtSecret.trim().isEmpty() || jwtSecret.length() < 32) {
+            log.warn("JWT secret is missing or too short (must be >= 32 chars). Using a randomly generated key for this session. Tokens will be invalid after restart.");
+            this.signingKey = Keys.hmacShaKeyFor(java.util.UUID.randomUUID().toString().getBytes(StandardCharsets.UTF_8));
+            // Note: UUID is 36 chars, sufficient for HS256 (256 bits)
+        } else {
+            this.signingKey = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+        }
     }
 
     public Claims extractAllClaims(String token) {

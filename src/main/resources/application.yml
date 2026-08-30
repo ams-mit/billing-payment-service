@@ -5,7 +5,7 @@ spring:
   datasource:
     url: ${DB_URL:jdbc:mysql://localhost:3307/billing_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
     username: ${DB_USER:root}
-    password: ${DB_PASSWORD:1234}
+    password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 10
@@ -54,7 +54,7 @@ springdoc:
 
 app:
   jwt:
-    secret: ${JWT_SECRET:dev-secret-key-replace-in-production-min-32-chars}
+    secret: ${JWT_SECRET:}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
   services:
     utility-service-url: ${UTILITY_SERVICE_URL:http://localhost:8082}
