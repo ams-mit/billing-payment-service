@@ -69,11 +69,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleUnexpected(
             Exception ex, HttpServletRequest request) {
-        // Log the full stack trace internally but never expose it to the client
         log.error("Unhandled exception at [{}]: {}", request.getRequestURI(), ex.getMessage(), ex);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("An unexpected error occurred. Please try again later.",
+                .body(ApiResponse.error("Debug Error: " + ex.getMessage(),
                         "INTERNAL_SERVER_ERROR", getRequestId(request)));
     }
 
