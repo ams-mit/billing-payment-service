@@ -4,7 +4,6 @@ import com.ams.billing.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -15,7 +14,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity           // enables @PreAuthorize on controller methods
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -24,27 +23,33 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
-                .csrf(AbstractHttpConfigurer::disable)          // stateless API — CSRF not needed
-                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(sm ->
+                        sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Public — health, docs
+                        // Public — health and Swagger
                         .requestMatchers(
                                 "/actuator/health",
                                 "/actuator/info",
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
                                 "/api-docs/**",
-                                "/v3/api-docs/**",
-                                "/test/token"
+                                "/v3/api-docs/**"
                         ).permitAll()
 
-                        // Internal service-to-service (no JWT — secured by Docker network)
-                        .requestMatchers("/api/v1/internal/**").permitAll()
+                        // Internal endpoints — Gateway Service JWT required
+                        // @PreAuthorize("hasRole('SERVICE')") on the controller handles this
+                        .requestMatchers("/api/v1/internal/**").authenticated()
 
-                        // Everything else requires authentication
+                        // Test token endpoint — dev/test profile only, Spring Profile
+                        // annotation on the controller prevents it loading in prod
+                        .requestMatchers("/test/**").permitAll()
+
+                        // All other endpoints require authentication
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(jwtAuthenticationFilter,
+                        UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
 }
