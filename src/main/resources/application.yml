@@ -1,6 +1,8 @@
 spring:
   application:
     name: billing-payment-service
+  profiles:
+    active: dev    # uses MockGroup2Client
 
   profiles.active: dev
 
