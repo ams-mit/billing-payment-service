@@ -20,6 +20,9 @@ out/
 *.env
 *.local
 
+# RSA keys — never commit real keys
+src/test/resources/keys/*.pem
+
 # ── OS ───────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db

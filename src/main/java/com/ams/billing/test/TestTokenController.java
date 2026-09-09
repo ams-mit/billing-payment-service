@@ -2,17 +2,14 @@ package com.ams.billing.test;
 
 import com.ams.billing.dto.response.ApiResponse;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
 import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
+import java.security.interfaces.RSAPrivateKey;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
@@ -30,30 +27,35 @@ import java.util.Map;
 @Profile({"dev", "test"})        // never runs in prod profile
 public class TestTokenController {
 
-    @Value("${app.jwt.secret:default-secret-key-that-is-at-least-32-characters-long}")
-    private String jwtSecret;
-
-    @GetMapping
-    public ResponseEntity<String> generateToken(
+    @PostMapping
+    public ResponseEntity<ApiResponse<Map<String, String>>> generateToken(
             @RequestParam String userId,
             @RequestParam String role,
-            HttpServletRequest request) {
+            HttpServletRequest request) throws Exception {
 
-        try {
-            log.info("Generating token for userId: {}, role: {}", userId, role);
-            SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
-            String token = Jwts.builder()
-                    .subject(userId)
-                    .claim("roles", List.of(role))
-                    .issuedAt(new Date())
-                    .expiration(new Date(System.currentTimeMillis() + 86400000))
-                    .signWith(key)
-                    .compact();
+        // Load the local dev gateway private key
+        // In real system the Gateway signs these — we simulate it locally
+        RSAPrivateKey gatewayPrivateKey = DevKeyLoader.loadPrivateKey(
+                "src/test/resources/keys/gateway-private.pem");
 
-            return ResponseEntity.ok("Token: " + token);
-        } catch (Exception e) {
-            log.error("Token generation failed: ", e);
-            return ResponseEntity.internalServerError().body("Error: " + e.getMessage());
-        }
+        String token = Jwts.builder()
+                .subject(userId)
+                .claim("type", "user")
+                .claim("roles", List.of(role))
+                .issuedAt(Date.from(Instant.now()))
+                .expiration(Date.from(Instant.now().plusSeconds(86400)))
+                .signWith(gatewayPrivateKey, Jwts.SIG.RS256)   // RS256 matching v2.1
+                .compact();
+
+        Map<String, String> data = Map.of(
+                "token", token,
+                "userId", userId,
+                "role", role,
+                "note", "Signed with local dev gateway key. RS256. Dev profile only."
+        );
+
+        return ResponseEntity.ok(
+                ApiResponse.ok("Test token generated", data,
+                        request.getHeader("X-Request-ID")));
     }
 }
