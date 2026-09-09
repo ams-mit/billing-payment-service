@@ -34,7 +34,15 @@ public interface ChargeRuleRepository extends JpaRepository<ChargeRule, String> 
 
     // GET /charge-rules/type/{chargeType}
     // Spring generates: SELECT * FROM charge_rules WHERE charge_type = ? AND status = ?
-    List<ChargeRule> findByChargeTypeAndStatus(ChargeType chargeType, String status);
+    @Query("""
+            SELECT cr FROM ChargeRule cr
+            WHERE (:chargeType IS NULL OR cr.chargeType = :chargeType)
+            AND cr.status = :status
+            """)
+    List<ChargeRule> findByChargeTypeAndStatus(
+            @Param("chargeType") ChargeType chargeType,
+            @Param("status") String status
+    );
 
     // Duplicate name check before creating — business rule enforcement
     // Spring generates: SELECT * FROM charge_rules WHERE name = ? AND status = 'ACTIVE'
