@@ -1,15 +1,12 @@
 spring:
-  application:
-    name: billing-payment-service
-
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE:dev}   # dev = MockGroup2Client | prod = RealGroup2Client
+    active: ${SPRING_PROFILES_ACTIVE:dev}
 
   datasource:
     url: "${DB_URL:jdbc:mysql://localhost:3307/billing_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}"
-    username: ${DB_USER:root}
-    password: ${DB_PASSWORD:}
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: "${DB_USER:root}"
+    password: "${DB_PASSWORD:}"
+    driver-class-name: "com.mysql.cj.jdbc.Driver"
     hikari:
       maximum-pool-size: 10
       minimum-idle: 2
@@ -18,7 +15,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: "validate"
     show-sql: false
     properties:
       hibernate:
@@ -27,39 +24,39 @@ spring:
 
   sql:
     init:
-      mode: never
+      mode: "never"
 
 server:
   port: ${SERVER_PORT:8081}
   error:
-    include-message: never
-    include-stacktrace: never
+    include-message: "never"
+    include-stacktrace: "never"
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: "health,info"
   endpoint:
     health:
-      show-details: when-authorized
+      show-details: "when-authorized"
   info:
     app:
       enabled: true
 
 springdoc:
   api-docs:
-    path: /api-docs
+    path: "/api-docs"
   swagger-ui:
-    path: /swagger-ui.html
-    operationsSorter: method
-    tagsSorter: alpha
+    path: "/swagger-ui.html"
+    operationsSorter: "method"
+    tagsSorter: "alpha"
 
 app:
   jwt:
-    gateway-public-key: ${GATEWAY_JWT_PUBLIC_KEY:}
-    service-private-key: ${SERVICE_JWT_PRIVATE_KEY:}
-    service-name: ${SERVICE_NAME:billing-payment-service}
+    gateway-public-key: "${GATEWAY_JWT_PUBLIC_KEY:}"
+    service-private-key: "${SERVICE_JWT_PRIVATE_KEY:}"
+    service-name: "${SERVICE_NAME:billing-payment-service}"
     service-jwt-expiry-ms: 300000
 
   services:
