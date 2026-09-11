@@ -19,4 +19,4 @@ app:
     service-name: billing-payment-service-test
     service-jwt-expiry-ms: 300000
   services:
-    api-gateway-url: http://localhost:8080
+    api-gateway-url: "http://localhost:8080"
