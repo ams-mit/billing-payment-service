@@ -1,10 +1,9 @@
 spring:
   application:
     name: billing-payment-service
-  profiles:
-    active: dev    # uses MockGroup2Client
 
-  profiles.active: dev
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}   # dev = MockGroup2Client | prod = RealGroup2Client
 
   datasource:
     url: ${DB_URL:jdbc:mysql://localhost:3307/billing_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
@@ -19,8 +18,8 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate          # NEVER auto-create in any environment — use schema.sql
-    show-sql: false               # flip to true locally if you need to debug queries
+      ddl-auto: validate
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
@@ -28,12 +27,12 @@ spring:
 
   sql:
     init:
-      mode: never                 # schema.sql is run manually / by migration scripts
+      mode: never
 
 server:
   port: ${SERVER_PORT:8081}
   error:
-    include-message: never        # never leak stack traces to the client
+    include-message: never
     include-stacktrace: never
 
 management:
@@ -58,23 +57,13 @@ springdoc:
 
 app:
   jwt:
-    # Gateway RSA public key — used to verify ALL incoming JWTs (user and service)
-    # In production: load from GATEWAY_JWT_PUBLIC_KEY env var (PEM format)
-    # In dev/test: we use a generated RSA key pair locally
-    gateway-public-key: ${GATEWAY_JWT_PUBLIC_KEY:#{T(java.nio.file.Files).readString(T(java.nio.file.Path).of('src/test/resources/keys/gateway-public.pem'))}}
-
-    # This service's RSA private key — used to sign outgoing Service JWTs
-    # when calling other services through the Gateway
-    service-private-key: ${SERVICE_JWT_PRIVATE_KEY:#{T(java.nio.file.Files).readString(T(java.nio.file.Path).of('src/test/resources/keys/service-private.pem'))}}
-
-    service-name: billing-payment-service
-    service-jwt-expiry-ms: 300000   # 5 minutes per v2.1 spec
+    gateway-public-key: ${GATEWAY_JWT_PUBLIC_KEY:}
+    service-private-key: ${SERVICE_JWT_PRIVATE_KEY:}
+    service-name: ${SERVICE_NAME:billing-payment-service}
+    service-jwt-expiry-ms: 300000
 
   services:
-    utility-service-url: ${UTILITY_SERVICE_URL:http://localhost:8082}
-    group2-lease-service-url: ${GROUP2_LEASE_SERVICE_URL:http://localhost:8083}
     api-gateway-url: ${API_GATEWAY_URL:http://localhost:8080}
 
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
-

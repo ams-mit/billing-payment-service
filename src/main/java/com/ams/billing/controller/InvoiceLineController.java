@@ -36,10 +36,7 @@ public class InvoiceLineController {
             Authentication auth,
             HttpServletRequest httpRequest) {
 
-        List<String> roles = auth.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .map(r -> r.replace("ROLE_", ""))
-                .toList();
+        List<String> roles = com.ams.billing.security.SecurityUtils.extractRoles(auth);
 
         List<InvoiceLineResponse> lines = invoiceService.getInvoiceLines(
                 invoiceId, auth.getName(), roles);

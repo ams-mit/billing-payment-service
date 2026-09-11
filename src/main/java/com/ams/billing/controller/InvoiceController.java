@@ -80,10 +80,7 @@ public class InvoiceController {
             Authentication auth,
             HttpServletRequest httpRequest) {
 
-        List<String> roles = auth.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .map(r -> r.replace("ROLE_", ""))
-                .toList();
+        List<String> roles = com.ams.billing.security.SecurityUtils.extractRoles(auth);
 
         InvoiceResponse response = invoiceService.getInvoiceById(
                 invoiceId, auth.getName(), roles);
@@ -103,10 +100,7 @@ public class InvoiceController {
             Authentication auth,
             HttpServletRequest httpRequest) {
 
-        List<String> roles = auth.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .map(r -> r.replace("ROLE_", ""))
-                .toList();
+        List<String> roles = com.ams.billing.security.SecurityUtils.extractRoles(auth);
 
         Page<InvoiceResponse> result = invoiceService.getInvoicesByUnit(
                 unitId, auth.getName(), roles,
@@ -127,10 +121,7 @@ public class InvoiceController {
             Authentication auth,
             HttpServletRequest httpRequest) {
 
-        List<String> roles = auth.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .map(r -> r.replace("ROLE_", ""))
-                .toList();
+        List<String> roles = com.ams.billing.security.SecurityUtils.extractRoles(auth);
 
         InvoiceResponse response = invoiceService.getInvoiceByUnitAndPeriod(
                 unitId, year, month, auth.getName(), roles);
