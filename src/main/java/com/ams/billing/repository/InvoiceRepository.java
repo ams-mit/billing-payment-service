@@ -37,9 +37,14 @@ public interface InvoiceRepository extends JpaRepository<Invoice, String> {
     // BILL-010: GET /invoices/units/{unitId}
     Page<Invoice> findByUnitId(String unitId, Pageable pageable);
 
+    Page<Invoice> findByUnitIdAndResidentId(String unitId, String residentId, Pageable pageable);
+
     // BILL-011: GET /invoices/units/{unitId}/period/{year}/{month}
     Optional<Invoice> findByUnitIdAndBillingYearAndBillingMonth(
             String unitId, Short billingYear, Byte billingMonth);
+
+    Optional<Invoice> findByUnitIdAndBillingYearAndBillingMonthAndResidentId(
+            String unitId, Short billingYear, Byte billingMonth, String residentId);
 
     // BILL-008: GET /invoices with filters
     @Query("""
