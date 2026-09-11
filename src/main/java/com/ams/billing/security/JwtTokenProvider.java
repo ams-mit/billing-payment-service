@@ -72,7 +72,9 @@ public class JwtTokenProvider {
         } catch (SignatureException ex) {
             log.warn("Gateway JWT RS256 signature invalid — possible key mismatch");
         } catch (IllegalArgumentException ex) {
-            log.warn("Gateway JWT claims empty");
+            log.warn("Gateway JWT claims empty or token malformed: {}. Token starts with: {}",
+                    ex.getMessage(),
+                    token != null && token.length() > 10 ? token.substring(0, 10) : "empty");
         }
         return false;
     }

@@ -1,0 +1,22 @@
+spring:
+  profiles:
+    active: test
+  datasource:
+    url: jdbc:h2:mem:billing_test;DB_CLOSE_DELAY=-1;MODE=MySQL
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+
+app:
+  jwt:
+    gateway-public-key: "dummy-public-key"
+    service-private-key: "dummy-private-key"
+    service-name: billing-payment-service-test
+    service-jwt-expiry-ms: 300000
+  services:
+    api-gateway-url: http://localhost:8080
