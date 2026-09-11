@@ -2,7 +2,7 @@ spring:
   profiles:
     active: test
   datasource:
-    url: jdbc:h2:mem:billing_test;DB_CLOSE_DELAY=-1;MODE=MySQL
+    url: "jdbc:h2:mem:billing_test;DB_CLOSE_DELAY=-1;MODE=MySQL"
     username: sa
     password:
     driver-class-name: org.h2.Driver
