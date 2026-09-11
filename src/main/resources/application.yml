@@ -54,9 +54,9 @@ springdoc:
 
 app:
   jwt:
-    gateway-public-key: "${GATEWAY_JWT_PUBLIC_KEY:}"
-    service-private-key: "${SERVICE_JWT_PRIVATE_KEY:}"
-    service-name: "${SERVICE_NAME:billing-payment-service}"
+    gateway-public-key: ${GATEWAY_JWT_PUBLIC_KEY:""}
+    service-private-key: ${SERVICE_JWT_PRIVATE_KEY:""}
+    service-name: ${SERVICE_NAME:billing-payment-service}
     service-jwt-expiry-ms: 300000
 
   services:
