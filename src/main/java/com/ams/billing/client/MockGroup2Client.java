@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @Profile({"dev", "test"})
+@Primary
 public class MockGroup2Client implements Group2ApiClient {
 
     @Override
