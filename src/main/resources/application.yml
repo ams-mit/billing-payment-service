@@ -57,11 +57,11 @@ app:
     # Gateway RSA public key — used to verify ALL incoming JWTs (user and service)
     # In production: load from GATEWAY_JWT_PUBLIC_KEY env var (PEM format)
     # In dev/test: we use a generated RSA key pair locally
-    gateway-public-key: ${GATEWAY_JWT_PUBLIC_KEY:#{T(java.nio.file.Files).exists(T(java.nio.file.Path).of('src/test/resources/keys/gateway-public.pem')) ? T(java.nio.file.Files).readString(T(java.nio.file.Path).of('src/test/resources/keys/gateway-public.pem')) : ''}}
+    gateway-public-key: "${GATEWAY_JWT_PUBLIC_KEY:#{T(java.nio.file.Files).exists(T(java.nio.file.Path).of('src/test/resources/keys/gateway-public.pem')) ? T(java.nio.file.Files).readString(T(java.nio.file.Path).of('src/test/resources/keys/gateway-public.pem')) : ''}}"
 
     # This service's RSA private key — used to sign outgoing Service JWTs
     # when calling other services through the Gateway
-    service-private-key: ${SERVICE_JWT_PRIVATE_KEY:#{T(java.nio.file.Files).exists(T(java.nio.file.Path).of('src/test/resources/keys/service-private.pem')) ? T(java.nio.file.Files).readString(T(java.nio.file.Path).of('src/test/resources/keys/service-private.pem')) : ''}}
+    service-private-key: "${SERVICE_JWT_PRIVATE_KEY:#{T(java.nio.file.Files).exists(T(java.nio.file.Path).of('src/test/resources/keys/service-private.pem')) ? T(java.nio.file.Files).readString(T(java.nio.file.Path).of('src/test/resources/keys/service-private.pem')) : ''}}"
 
     service-name: billing-payment-service
     service-jwt-expiry-ms: 300000   # 5 minutes per v2.1 spec
