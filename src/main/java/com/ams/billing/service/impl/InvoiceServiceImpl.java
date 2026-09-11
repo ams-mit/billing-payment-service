@@ -54,8 +54,6 @@ public class InvoiceServiceImpl implements InvoiceService {
         validatePeriodMonth(request);
 
         // 2. Call Group 2 — validates unit exists (PROP-016) and has active occupancy (LEASE-011)
-        //    MockGroup2Client is used locally. RealGroup2Client in production.
-        //    Throws UnitValidationException (422) or ServiceUnavailableException (503)
         group2ApiClient.validateUnitForInvoicing(request.getUnitId());
 
         // 3. Duplicate invoice check — same unit + year + month + period must not exist (unless CANCELLED)
@@ -72,14 +70,10 @@ public class InvoiceServiceImpl implements InvoiceService {
         }
 
         // 4. Load all ACTIVE charge rules
-        //    These are the rules at this moment in time
         List<ChargeRule> activeRules = chargeRuleRepository
                 .findByChargeTypeAndStatus(null, "ACTIVE")
                 .stream()
                 .toList();
-
-        // If no active rules, we can still generate invoice — it will have no lines
-        // (edge case — in practice Finance Officer sets up rules before generating invoices)
 
         // 5. Build Invoice entity
         Invoice invoice = Invoice.builder()
@@ -92,28 +86,22 @@ public class InvoiceServiceImpl implements InvoiceService {
                 .status(InvoiceStatus.ISSUED)
                 .issuedBy(issuedBy)
                 .issuedAt(Instant.now())
-                .totalAmount(BigDecimal.ZERO)  // will update after lines are created
+                .totalAmount(BigDecimal.ZERO)
                 .build();
 
         Invoice savedInvoice = invoiceRepository.save(invoice);
 
-        // 6. ── SNAPSHOT RULE — most critical business rule ──────────
-        //    For each active charge rule, create an InvoiceLine that COPIES
-        //    the name, type, and amount at THIS moment.
-        //
-        //    This is NOT a foreign key to the rule — it is a permanent copy.
-        //    If the rule is updated or deleted tomorrow, this line never changes.
-        //    The updatable=false columns in InvoiceLine entity enforce this at DB level.
+        // 6. ── SNAPSHOT RULE ──────────
         List<InvoiceLine> lines = new ArrayList<>();
         BigDecimal total = BigDecimal.ZERO;
 
         for (ChargeRule rule : activeRules) {
             InvoiceLine line = InvoiceLine.builder()
                     .invoice(savedInvoice)
-                    .chargeRuleId(rule.getId())            // reference (not FK)
-                    .chargeRuleName(rule.getName())        // SNAPSHOT — copied now
-                    .chargeType(rule.getChargeType())      // SNAPSHOT — copied now
-                    .amount(rule.getAmount())              // SNAPSHOT — copied now
+                    .chargeRuleId(rule.getId())
+                    .chargeRuleName(rule.getName())
+                    .chargeType(rule.getChargeType())
+                    .amount(rule.getAmount())
                     .build();
             lines.add(line);
             total = total.add(rule.getAmount());
@@ -159,8 +147,8 @@ public class InvoiceServiceImpl implements InvoiceService {
         Invoice invoice = invoiceRepository.findById(invoiceId)
                 .orElseThrow(() -> new InvoiceNotFoundException(invoiceId));
 
-        // Role restriction: RESIDENT, TENANT, OWNER can only see their own unit's invoices
-        enforceUnitAccess(invoice.getUnitId(), requestingUserId, requestingUserRoles);
+        // Role restriction: RESIDENT, TENANT, OWNER can only see their own invoices
+        enforceInvoiceAccess(invoice, requestingUserId, requestingUserRoles);
 
         return InvoiceResponse.fromWithLines(invoice);
     }
@@ -173,7 +161,14 @@ public class InvoiceServiceImpl implements InvoiceService {
                                                    List<String> requestingUserRoles,
                                                    Pageable pageable) {
 
-        enforceUnitAccess(unitId, requestingUserId, requestingUserRoles);
+        boolean isPrivileged = isPrivilegedRole(requestingUserRoles);
+
+        if (!isPrivileged) {
+            // For non-privileged roles, we filter by both unitId AND requestingUserId (residentId)
+            return invoiceRepository.findByUnitIdAndResidentId(unitId, requestingUserId, pageable)
+                    .map(InvoiceResponse::from);
+        }
+
         return invoiceRepository.findByUnitId(unitId, pageable).map(InvoiceResponse::from);
     }
 
@@ -185,10 +180,20 @@ public class InvoiceServiceImpl implements InvoiceService {
                                                      Integer month, String requestingUserId,
                                                      List<String> requestingUserRoles) {
 
-        enforceUnitAccess(unitId, requestingUserId, requestingUserRoles);
+        boolean isPrivileged = isPrivilegedRole(requestingUserRoles);
 
-        Invoice invoice = invoiceRepository
-                .findByUnitIdAndBillingYearAndBillingMonth(
+        if (!isPrivileged) {
+            Invoice invoice = invoiceRepository.findByUnitIdAndBillingYearAndBillingMonthAndResidentId(
+                            unitId, year.shortValue(), month.byteValue(), requestingUserId)
+                    .orElseThrow(() -> new BillingException(
+                            "No invoice found for your account for unit %s, period %d/%d"
+                                    .formatted(unitId, month, year),
+                            HttpStatus.NOT_FOUND,
+                            "INVOICE_NOT_FOUND"));
+            return InvoiceResponse.fromWithLines(invoice);
+        }
+
+        Invoice invoice = invoiceRepository.findByUnitIdAndBillingYearAndBillingMonth(
                         unitId, year.shortValue(), month.byteValue())
                 .orElseThrow(() -> new BillingException(
                         "No invoice found for unit %s, period %d/%d"
@@ -208,7 +213,6 @@ public class InvoiceServiceImpl implements InvoiceService {
         Invoice invoice = invoiceRepository.findById(invoiceId)
                 .orElseThrow(() -> new InvoiceNotFoundException(invoiceId));
 
-        // Cannot cancel a PAID invoice
         if (invoice.getStatus() == InvoiceStatus.PAID
                 && "CANCELLED".equals(request.getStatus())) {
             throw new BillingException(
@@ -217,7 +221,6 @@ public class InvoiceServiceImpl implements InvoiceService {
                     "INVALID_STATUS_TRANSITION");
         }
 
-        // CANCELLED requires a reason
         if ("CANCELLED".equals(request.getStatus())) {
             if (request.getCancellationReason() == null
                     || request.getCancellationReason().isBlank()) {
@@ -248,7 +251,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         Invoice invoice = invoiceRepository.findById(invoiceId)
                 .orElseThrow(() -> new InvoiceNotFoundException(invoiceId));
 
-        enforceUnitAccess(invoice.getUnitId(), requestingUserId, requestingUserRoles);
+        enforceInvoiceAccess(invoice, requestingUserId, requestingUserRoles);
 
         return invoiceLineRepository.findByInvoiceId(invoiceId)
                 .stream()
@@ -258,30 +261,26 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     // ── Private helpers ───────────────────────────────────────
 
-    /**
-     * Enforces that RESIDENT, TENANT, and OWNER roles can only access
-     * invoices belonging to their own unit.
-     *
-     * FINANCE_OFFICER and APARTMENT_MANAGER can access all units.
-     *
-     * Per v2.1: accessing another unit's invoice returns 403 Forbidden.
-     *
-     * NOTE: In the real system the unitId linked to the authenticated user
-     * comes from Group 1's resident profile. Until Group 1 is ready, we use
-     * the userId as the unit ownership check placeholder.
-     */
-    private void enforceUnitAccess(String invoiceUnitId, String requestingUserId,
-                                   List<String> roles) {
+    private boolean isPrivilegedRole(List<String> roles) {
+        log.debug("Checking privileged access for roles: {}", roles);
+        boolean privileged = roles.stream().anyMatch(role ->
+                role.equalsIgnoreCase("FINANCE_OFFICER") || role.equalsIgnoreCase("APARTMENT_MANAGER"));
+        log.debug("Is privileged: {}", privileged);
+        return privileged;
+    }
 
-        boolean isPrivilegedRole = roles.stream().anyMatch(role ->
-                role.equals("FINANCE_OFFICER") || role.equals("APARTMENT_MANAGER"));
+    private void enforceInvoiceAccess(Invoice invoice, String requestingUserId,
+                                       List<String> roles) {
 
-        if (!isPrivilegedRole) {
-            // Restricted roles — validate they own this unit
-            // TODO: replace this placeholder check with a real unit-ownership
-            // lookup from Group 1's resident profile once Group 1 deploys
-            log.debug("Role restriction check: userId={}, invoiceUnitId={}",
-                    requestingUserId, invoiceUnitId);
+        if (isPrivilegedRole(roles)) {
+            log.debug("Privileged access granted to user: {}", requestingUserId);
+            return;
+        }
+
+        if (!invoice.getResidentId().equals(requestingUserId)) {
+            log.warn("Access denied: User {} attempted to access invoice {} belonging to resident {}",
+                    requestingUserId, invoice.getId(), invoice.getResidentId());
+            throw new AccessDeniedException("You are not authorized to view this invoice.");
         }
     }
 
