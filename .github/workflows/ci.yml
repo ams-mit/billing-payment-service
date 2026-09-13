@@ -50,7 +50,7 @@ jobs:
         id: secrets
         continue-on-error: true
         run: |
-          docker run -v ${{ github.workspace }}:/repo zricethezav/gitleaks:latest detect --source="/repo" --no-git -v
+          docker run -v ${{ github.workspace }}:/repo zricethezav/gitleaks:latest detect --source="/repo" --no-git -v --exclude-path="/repo/target"
 
       - name: Upload test report
         if: always()
