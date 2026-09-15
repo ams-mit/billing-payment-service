@@ -17,79 +17,103 @@ import java.util.Map;
 
 /**
  * TEST ONLY — generates JWT tokens for Postman testing.
- * Only active when spring.profiles.active=dev or test.
- * Remove or disable before production deployment.
+ *
+ * Active ONLY on dev and test profiles.
+ * Hidden from Swagger UI.
+ * Never deployed to production.
+ *
+ * Endpoints:
+ *   POST /test/token          → generates a user JWT (type: user)
+ *   POST /test/service-token  → generates a service JWT (type: service)
  */
-@Hidden                          // hidden from Swagger UI
 @Slf4j
+@Hidden
 @RestController
-@RequestMapping("/test/token")
-@Profile({"dev", "test"})        // never runs in prod profile
+@RequestMapping("/test")
+@Profile({"dev", "test"})
 public class TestTokenController {
 
-    @PostMapping
-    public ResponseEntity<ApiResponse<Map<String, String>>> generateToken(
+    // POST /test/token
+    @PostMapping("/token")
+    public ResponseEntity<ApiResponse<Map<String, String>>> generateUserToken(
             @RequestParam String userId,
             @RequestParam String role,
-            HttpServletRequest request) throws Exception {
+            HttpServletRequest httpRequest) {
 
-        // Load the local dev gateway private key
-        // In real system the Gateway signs these — we simulate it locally
-        RSAPrivateKey gatewayPrivateKey = DevKeyLoader.loadPrivateKey(
-                "src/test/resources/keys/gateway-private.pem");
+        try {
+            RSAPrivateKey gatewayPrivateKey = DevKeyLoader.loadPrivateKey(
+                    "src/test/resources/keys/gateway-private.pem");
 
-        String token = Jwts.builder()
-                .subject(userId)
-                .claim("type", "user")
-                .claim("roles", List.of(role))
-                .issuedAt(Date.from(Instant.now()))
-                .expiration(Date.from(Instant.now().plusSeconds(86400)))
-                .signWith(gatewayPrivateKey, Jwts.SIG.RS256)   // RS256 matching v2.1
-                .compact();
+            String token = Jwts.builder()
+                    .subject(userId)
+                    .claim("type", "user")
+                    .claim("roles", List.of(role))
+                    .issuedAt(Date.from(Instant.now()))
+                    .expiration(Date.from(Instant.now().plusSeconds(86400)))
+                    .signWith(gatewayPrivateKey, Jwts.SIG.RS256)
+                    .compact();
 
-        Map<String, String> data = Map.of(
-                "token", token,
-                "userId", userId,
-                "role", role,
-                "note", "Signed with local dev gateway key. RS256. Dev profile only."
-        );
+            Map<String, String> data = Map.of(
+                    "token", token,
+                    "userId", userId,
+                    "role", role,
+                    "type", "user",
+                    "usage", "Authorization: Bearer " + token
+            );
 
-        return ResponseEntity.ok(
-                ApiResponse.ok("Test token generated", data,
-                        request.getHeader("X-Request-ID")));
+            log.info("Test user token generated: userId={}, role={}", userId, role);
+
+            return ResponseEntity.ok(ApiResponse.ok(
+                    "Test token generated — dev/test profile only",
+                    data,
+                    httpRequest.getHeader("X-Request-ID")));
+
+        } catch (Exception ex) {
+            log.error("Failed to generate test token: {}", ex.getMessage(), ex);
+            throw new RuntimeException(
+                    "Failed to generate test token. " +
+                            "Check that src/test/resources/keys/gateway-private.pem exists. " +
+                            "Run the key generation commands in the setup guide.", ex);
+        }
     }
 
-    /**
-     * Generates a Service JWT for testing internal endpoints.
-     * Simulates what Group 4's community-service would send.
-     * Dev/test profile only.
-     */
+    // POST /test/service-token
     @PostMapping("/service-token")
     public ResponseEntity<ApiResponse<Map<String, String>>> generateServiceToken(
             @RequestParam String serviceName,
-            HttpServletRequest request) throws Exception {
+            HttpServletRequest httpRequest) {
 
-        RSAPrivateKey gatewayPrivateKey = DevKeyLoader.loadPrivateKey(
-                "src/test/resources/keys/gateway-private.pem");
+        try {
+            RSAPrivateKey gatewayPrivateKey = DevKeyLoader.loadPrivateKey(
+                    "src/test/resources/keys/gateway-private.pem");
 
-        String token = Jwts.builder()
-                .subject(serviceName)
-                .claim("type", "service")   // type = service per v2.1
-                .issuedAt(Date.from(Instant.now()))
-                .expiration(Date.from(Instant.now().plusSeconds(300))) // 5 min
-                .signWith(gatewayPrivateKey, Jwts.SIG.RS256)
-                .compact();
+            String token = Jwts.builder()
+                    .subject(serviceName)
+                    .claim("type", "service")
+                    .issuedAt(Date.from(Instant.now()))
+                    .expiration(Date.from(Instant.now().plusSeconds(300)))
+                    .signWith(gatewayPrivateKey, Jwts.SIG.RS256)
+                    .compact();
 
-        Map<String, String> data = Map.of(
-                "token", token,
-                "serviceName", serviceName,
-                "type", "service",
-                "note", "Service JWT — use for /api/v1/internal/* endpoints"
-        );
+            Map<String, String> data = Map.of(
+                    "token", token,
+                    "serviceName", serviceName,
+                    "type", "service",
+                    "note", "Service JWT — use for /api/v1/internal/* endpoints"
+            );
 
-        return ResponseEntity.ok(ApiResponse.ok(
-                "Service token generated", data,
-                request.getHeader("X-Request-ID")));
+            log.info("Test service token generated: serviceName={}", serviceName);
+
+            return ResponseEntity.ok(ApiResponse.ok(
+                    "Service token generated — dev/test profile only",
+                    data,
+                    httpRequest.getHeader("X-Request-ID")));
+
+        } catch (Exception ex) {
+            log.error("Failed to generate service token: {}", ex.getMessage(), ex);
+            throw new RuntimeException(
+                    "Failed to generate service token. " +
+                            "Check that src/test/resources/keys/gateway-private.pem exists.", ex);
+        }
     }
-
 }
