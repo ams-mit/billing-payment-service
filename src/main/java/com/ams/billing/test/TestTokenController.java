@@ -58,4 +58,38 @@ public class TestTokenController {
                 ApiResponse.ok("Test token generated", data,
                         request.getHeader("X-Request-ID")));
     }
+
+    /**
+     * Generates a Service JWT for testing internal endpoints.
+     * Simulates what Group 4's community-service would send.
+     * Dev/test profile only.
+     */
+    @PostMapping("/service-token")
+    public ResponseEntity<ApiResponse<Map<String, String>>> generateServiceToken(
+            @RequestParam String serviceName,
+            HttpServletRequest request) throws Exception {
+
+        RSAPrivateKey gatewayPrivateKey = DevKeyLoader.loadPrivateKey(
+                "src/test/resources/keys/gateway-private.pem");
+
+        String token = Jwts.builder()
+                .subject(serviceName)
+                .claim("type", "service")   // type = service per v2.1
+                .issuedAt(Date.from(Instant.now()))
+                .expiration(Date.from(Instant.now().plusSeconds(300))) // 5 min
+                .signWith(gatewayPrivateKey, Jwts.SIG.RS256)
+                .compact();
+
+        Map<String, String> data = Map.of(
+                "token", token,
+                "serviceName", serviceName,
+                "type", "service",
+                "note", "Service JWT — use for /api/v1/internal/* endpoints"
+        );
+
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Service token generated", data,
+                request.getHeader("X-Request-ID")));
+    }
+
 }
