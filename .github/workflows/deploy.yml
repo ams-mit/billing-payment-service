@@ -26,11 +26,6 @@ jobs:
       - name: Push Docker image to ACR
         run: docker push ${{ secrets.AZURE_REGISTRY_URL }}/billing-payment-service:${{ github.sha }}
 
-      - name: Deploy to Azure App Service
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ secrets.AZURE_APP_SERVICE_NAME }}
-          images: ${{ secrets.AZURE_REGISTRY_URL }}/billing-payment-service:${{ github.sha }}
 
       - name: Deploy to Azure App Service
         uses: azure/webapps-deploy@v3
