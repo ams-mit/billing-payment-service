@@ -1,0 +1,40 @@
+name: Deploy — billing-payment-service
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    name: Build, Push to ACR, Deploy to Azure
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure Container Registry
+        uses: azure/docker-login@v2
+        with:
+          login-server: ${{ secrets.AZURE_REGISTRY_URL }}
+          username: ${{ secrets.AZURE_REGISTRY_USERNAME }}
+          password: ${{ secrets.AZURE_REGISTRY_PASSWORD }}
+
+      - name: Build Docker image
+        run: docker build -t ${{ secrets.AZURE_REGISTRY_URL }}/billing-payment-service:${{ github.sha }} .
+
+      - name: Push Docker image to ACR
+        run: docker push ${{ secrets.AZURE_REGISTRY_URL }}/billing-payment-service:${{ github.sha }}
+
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ secrets.AZURE_APP_SERVICE_NAME }}
+          images: ${{ secrets.AZURE_REGISTRY_URL }}/billing-payment-service:${{ github.sha }}
+
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ secrets.AZURE_APP_SERVICE_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          images: ${{ secrets.AZURE_REGISTRY_URL }}/billing-payment-service:${{ github.sha }}
