@@ -55,20 +55,32 @@ public class DevKeyLoader {
     }
 
     private static String readPemFile(String pemPath) throws IOException {
+        // 1. Try as absolute/relative filesystem path
         Path path = Path.of(pemPath);
-        if (!Files.exists(path)) {
-            throw new IOException(
-                    "RSA key file not found: " + path.toAbsolutePath() + "\n" +
-                            "Run these commands to generate dev keys:\n" +
-                            "  mkdir -p src/test/resources/keys\n" +
-                            "  openssl genrsa -out src/test/resources/keys/gateway-private.pem 2048\n" +
-                            "  openssl rsa -in src/test/resources/keys/gateway-private.pem " +
-                            "-pubout -out src/test/resources/keys/gateway-public.pem\n" +
-                            "  openssl genrsa -out src/test/resources/keys/service-private.pem 2048\n" +
-                            "  openssl rsa -in src/test/resources/keys/service-private.pem " +
-                            "-pubout -out src/test/resources/keys/service-public.pem"
-            );
+        if (Files.exists(path)) {
+            return Files.readString(path);
         }
-        return Files.readString(path);
+
+        // 2. Try as classpath resource
+        try (var is = DevKeyLoader.class.getClassLoader().getResourceAsStream(pemPath)) {
+            if (is != null) {
+                return new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+            }
+        } catch (Exception e) {
+            log.debug("Classpath load failed for {}: {}", pemPath, e.getMessage());
+        }
+
+        // 3. If all fail, throw the original detailed error
+        throw new IOException(
+                "RSA key file not found: " + pemPath + " (checked filesystem and classpath)\n" +
+                        "Run these commands to generate dev keys:\n" +
+                        "  mkdir -p src/main/resources/keys\n" +
+                        "  openssl genrsa -out src/main/resources/keys/gateway-private.pem 2048\n" +
+                        "  openssl rsa -in src/main/resources/keys/gateway-private.pem " +
+                        "-pubout -out src/main/resources/keys/gateway-public.pem\n" +
+                        "  openssl genrsa -out src/main/resources/keys/service-private.pem 2048\n" +
+                        "  openssl rsa -in src/main/resources/keys/service-private.pem " +
+                        "-pubout -out src/main/resources/keys/service-public.pem"
+        );
     }
 }

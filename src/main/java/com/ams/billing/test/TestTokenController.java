@@ -42,7 +42,7 @@ public class TestTokenController {
 
         try {
             RSAPrivateKey gatewayPrivateKey = DevKeyLoader.loadPrivateKey(
-                    "src/test/resources/keys/gateway-private.pem");
+                    "keys/gateway-private.pem");
 
             String token = Jwts.builder()
                     .subject(userId)
@@ -85,7 +85,7 @@ public class TestTokenController {
 
         try {
             RSAPrivateKey gatewayPrivateKey = DevKeyLoader.loadPrivateKey(
-                    "src/test/resources/keys/gateway-private.pem");
+                    "keys/gateway-private.pem");
 
             String token = Jwts.builder()
                     .subject(serviceName)
