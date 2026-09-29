@@ -83,11 +83,8 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         // Calculate current outstanding balance
-        // Formula: invoice total - sum of all non-rejected payments (CONFIRMED + PENDING)
-        BigDecimal nonRejectedPayments = paymentRepository
-                .sumNonRejectedAmountByInvoiceId(invoice.getId());
-        BigDecimal outstandingBalance = invoice.getTotalAmount()
-                .subtract(nonRejectedPayments);
+        BigDecimal outstandingBalance = calculateOutstandingBalance(invoice);
+
 
         // Overpayment check — 422 per v2.1 spec
         if (request.getAmount().compareTo(outstandingBalance) > 0) {
@@ -266,6 +263,12 @@ public class PaymentServiceImpl implements PaymentService {
 
         log.info("Invoice status recalculated: invoiceId={}, newStatus={}",
                 invoice.getId(), newStatus);
+    }
+
+    private BigDecimal calculateOutstandingBalance(Invoice invoice) {
+        BigDecimal nonRejectedPayments = paymentRepository
+                .sumNonRejectedAmountByInvoiceId(invoice.getId());
+        return invoice.getTotalAmount().subtract(nonRejectedPayments);
     }
 
     private void enforceUnitAccess(String unitId, String residentId,
