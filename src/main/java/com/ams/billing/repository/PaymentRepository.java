@@ -58,6 +58,15 @@ public interface PaymentRepository extends JpaRepository<Payment, String> {
             """)
     BigDecimal sumConfirmedAmountByInvoiceId(@Param("invoiceId") String invoiceId);
 
+    // Used for overpayment check — sum of all non-rejected payments (PENDING + CONFIRMED)
+    @Query("""
+            SELECT COALESCE(SUM(p.amount), 0)
+            FROM Payment p
+            WHERE p.invoice.id = :invoiceId
+            AND p.status != 'REJECTED'
+            """)
+    BigDecimal sumNonRejectedAmountByInvoiceId(@Param("invoiceId") String invoiceId);
+
     // Used by BalanceService — sum of all CONFIRMED payments for a unit
     @Query("""
             SELECT COALESCE(SUM(p.amount), 0)
