@@ -7,7 +7,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.KeyFactory;
-import java.security.PublicKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.PKCS8EncodedKeySpec;
@@ -19,17 +18,20 @@ import java.util.List;
 /**
  * RS256 JWT provider for billing-payment-service.
  *
- * VERIFY:  All incoming JWTs (user and service) are Gateway JWTs.
- *          We verify them using the Gateway's RSA public key.
+ * VERIFY:  All incoming JWTs (user and service) are verified using
+ *          app.jwt.gateway-public-key. Which key this resolves to depends
+ *          on the active Spring profile:
  *
- * SIGN:    When making internal calls to other services through the Gateway,
- *          we create a Service JWT signed with our own RSA private key.
+ *            dev profile   → test-gateway-public-key (matches TestTokenController)
+ *            prod profile  → real API Gateway public key
  *
- * We NEVER hold the Gateway's private key.
+ *          Profile override is in application-dev.yml — no dual-key logic needed.
+ *
+ * SIGN:    When making internal calls through the API Gateway, a Service JWT
+ *          is created signed with this service's own RSA private key.
+ *
+ * We NEVER hold the real API Gateway private key.
  * We NEVER hold other services' private keys.
- *
- * In local dev/test: RSA keys are generated once and stored in
- * src/test/resources/keys/ — never committed as real production keys.
  */
 @Slf4j
 @Component
@@ -56,6 +58,11 @@ public class JwtTokenProvider {
 
     /**
      * Validates an incoming Gateway JWT (user or service type).
+     *
+     * The public key used is determined by the active Spring profile:
+     *   dev  → test-gateway-public-key  (from application-dev.yml override)
+     *   prod → real gateway-public-key  (from application.yml)
+     *
      * Checks RS256 signature, expiry, and required claims.
      */
     public boolean validateToken(String token) {
@@ -146,7 +153,7 @@ public class JwtTokenProvider {
             return (RSAPublicKey) kf.generatePublic(new X509EncodedKeySpec(decoded));
         } catch (Exception ex) {
             log.warn("Gateway public key not configured — JWT validation will fail. " +
-                    "Set GATEWAY_JWT_PUBLIC_KEY env var or use dev key setup.");
+                    "Set GATEWAY_JWT_PUBLIC_KEY env var or check application-dev.yml.");
             return null;
         }
     }

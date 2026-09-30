@@ -56,13 +56,13 @@ app:
   jwt:
     gateway-public-key: |
       -----BEGIN PUBLIC KEY-----
-      MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAu8Ivakwwzwdo/Js1QVRO5
-      Wlah8KcYwfZjOo0KIqn+rh0SD+i/B1TWZiBHGP0HVKhtbM89ih5IJYXbtelPCvWFY
-      uAIlOYVWK0UbymZOGg0EazJi0nocdsvT8NMZZZdT51upWWOKJl/BwJt7Qlv++U8eH
-      VAZ7i1/nK83oPGprLvsFA1t0uHdktrHpE/RZIr//F3INVb7QACy31RjfZdXeX4qs2
-      2lcT7ZEkvNoAxBHqhOV7cxZbvnivf6cxsFANbqJSYdwjoaXXdZUh71g/gfk3EELaj
-      phRPOgVcf+MtTtLoTumbEnzM2ZTUlFr9nnrgeXqMtYVSDAazypw7GRSDzYBiQIDAQA
-      B
+      MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAu8Ivakwwzwdo/Js1QVRO
+      5Wlah8KcYwfZjOo0KIqn+rh0SD+i/B1TWZiBHGP0HVKhtbM89ih5IJYXbtelPCvW
+      FYuAIlOYVWK0UbymZOGg0EazJi0nocdsvT8NMZZZdT51upWWOKJl/BwJt7Qlv++U
+      8eHVAZ7i1/nK83oPGprLvsFA1t0uHdktrHpE/RZIr//F3INVb7QACy31RjfZdXeX
+      4qs22lcT7ZEkvNoAxBHqhOV7cxZbvnivf6cxsFANbqJSYdwjoaXXdZUh71g/gfk3
+      EELajphRPOgVcf+MtTtLoTumbEnzM2ZTUlFr9nnrgeXqMtYVSDAazypw7GRSDzYB
+      iQIDAQAB
       -----END PUBLIC KEY-----
     service-private-key: |
       -----BEGIN PRIVATE KEY-----

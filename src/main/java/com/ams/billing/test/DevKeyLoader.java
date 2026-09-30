@@ -16,11 +16,18 @@ import java.util.Base64;
  * Loads RSA keys from the filesystem for local dev testing.
  * Used ONLY by TestTokenController — never in production code.
  *
- * Keys are located in: src/test/resources/keys/
- *   gateway-private.pem  — signs test tokens (simulates the real API Gateway)
- *   gateway-public.pem   — loaded by JwtTokenProvider to verify tokens
- *   service-private.pem  — this service's own private key
- *   service-public.pem   — this service's public key (shared with Gateway)
+ * Key layout in src/main/resources/keys/:
+ *
+ *   test-gateway-private.pem  — LOCAL DEV ONLY. Signs test JWTs (simulates API Gateway for Postman).
+ *                               Never used in production. Never the real gateway private key.
+ *   test-gateway-public.pem   — Matching public key. Registered as app.jwt.dev-signing-public-key
+ *                               so JwtTokenProvider accepts test tokens only in dev profile.
+ *   gateway-public.pem        — Real API Gateway public key (from gateway team). Used by
+ *                               JwtTokenProvider as the primary verification key in all profiles.
+ *   service-private.pem       — This service's own private key for outgoing Service JWTs.
+ *   service-public.pem        — This service's public key (registered with API Gateway).
+ *
+ * The real API Gateway private key is NEVER stored in this repository.
  */
 @Slf4j
 public class DevKeyLoader {
@@ -70,14 +77,16 @@ public class DevKeyLoader {
             log.debug("Classpath load failed for {}: {}", pemPath, e.getMessage());
         }
 
-        // 3. If all fail, throw the original detailed error
+        // 3. If all fail, throw a clear error with setup instructions
         throw new IOException(
-                "RSA key file not found: " + pemPath + " (checked filesystem and classpath)\n" +
-                        "Run these commands to generate dev keys:\n" +
+                "Dev key file not found: " + pemPath + " (checked filesystem and classpath)\n" +
+                        "Run these commands to regenerate dev keys:\n" +
                         "  mkdir -p src/main/resources/keys\n" +
-                        "  openssl genrsa -out src/main/resources/keys/gateway-private.pem 2048\n" +
-                        "  openssl rsa -in src/main/resources/keys/gateway-private.pem " +
-                        "-pubout -out src/main/resources/keys/gateway-public.pem\n" +
+                        "  # Local dev test key pair (simulates API Gateway for Postman — NOT the real gateway key):\n" +
+                        "  openssl genrsa -out src/main/resources/keys/test-gateway-private.pem 2048\n" +
+                        "  openssl rsa -in src/main/resources/keys/test-gateway-private.pem " +
+                        "-pubout -out src/main/resources/keys/test-gateway-public.pem\n" +
+                        "  # Service key pair (this service's own identity key):\n" +
                         "  openssl genrsa -out src/main/resources/keys/service-private.pem 2048\n" +
                         "  openssl rsa -in src/main/resources/keys/service-private.pem " +
                         "-pubout -out src/main/resources/keys/service-public.pem"

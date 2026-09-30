@@ -16,11 +16,17 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * TEST ONLY — generates JWT tokens for Postman testing.
+ * TEST ONLY — generates JWT tokens for Postman / local dev testing.
  *
  * Active ONLY on dev and test profiles.
  * Hidden from Swagger UI.
  * Never deployed to production.
+ *
+ * Tokens are signed with a LOCAL DEV key (test-gateway-private.pem) — NOT the
+ * real API Gateway private key. The service accepts these tokens via the
+ * app.jwt.dev-signing-public-key configured in application.yml.
+ * In production, dev-signing-public-key is absent so these tokens are NEVER
+ * accepted there.
  *
  * Endpoints:
  *   POST /test/token          → generates a user JWT (type: user)
@@ -41,8 +47,9 @@ public class TestTokenController {
             HttpServletRequest httpRequest) {
 
         try {
-            RSAPrivateKey gatewayPrivateKey = DevKeyLoader.loadPrivateKey(
-                    "keys/gateway-private.pem");
+            // Use the LOCAL dev test key — not the real gateway key
+            RSAPrivateKey testPrivateKey = DevKeyLoader.loadPrivateKey(
+                    "keys/test-gateway-private.pem");
 
             String token = Jwts.builder()
                     .subject(userId)
@@ -50,7 +57,7 @@ public class TestTokenController {
                     .claim("roles", List.of(role))
                     .issuedAt(Date.from(Instant.now()))
                     .expiration(Date.from(Instant.now().plusSeconds(86400)))
-                    .signWith(gatewayPrivateKey, Jwts.SIG.RS256)
+                    .signWith(testPrivateKey, Jwts.SIG.RS256)
                     .compact();
 
             Map<String, String> data = Map.of(
@@ -72,8 +79,7 @@ public class TestTokenController {
             log.error("Failed to generate test token: {}", ex.getMessage(), ex);
             throw new RuntimeException(
                     "Failed to generate test token. " +
-                            "Check that src/test/resources/keys/gateway-private.pem exists. " +
-                            "Run the key generation commands in the setup guide.", ex);
+                            "Check that src/test/resources/keys/test-gateway-private.pem exists.", ex);
         }
     }
 
@@ -84,15 +90,16 @@ public class TestTokenController {
             HttpServletRequest httpRequest) {
 
         try {
-            RSAPrivateKey gatewayPrivateKey = DevKeyLoader.loadPrivateKey(
-                    "keys/gateway-private.pem");
+            // Use the LOCAL dev test key — not the real gateway key
+            RSAPrivateKey testPrivateKey = DevKeyLoader.loadPrivateKey(
+                    "keys/test-gateway-private.pem");
 
             String token = Jwts.builder()
                     .subject(serviceName)
                     .claim("type", "service")
                     .issuedAt(Date.from(Instant.now()))
                     .expiration(Date.from(Instant.now().plusSeconds(300)))
-                    .signWith(gatewayPrivateKey, Jwts.SIG.RS256)
+                    .signWith(testPrivateKey, Jwts.SIG.RS256)
                     .compact();
 
             Map<String, String> data = Map.of(
@@ -113,7 +120,7 @@ public class TestTokenController {
             log.error("Failed to generate service token: {}", ex.getMessage(), ex);
             throw new RuntimeException(
                     "Failed to generate service token. " +
-                            "Check that src/test/resources/keys/gateway-private.pem exists.", ex);
+                            "Check that src/test/resources/keys/test-gateway-private.pem exists.", ex);
         }
     }
 }
