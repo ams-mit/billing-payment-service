@@ -53,7 +53,7 @@ public class ChargeRuleController {
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Validation failed")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "Duplicate rule name")
     @PostMapping
-    @PreAuthorize("hasRole('FINANCE_OFFICER')")
+    @PreAuthorize("hasAuthority('FINANCE_OFFICER')")
     public ResponseEntity<ApiResponse<ChargeRuleResponse>> createChargeRule(
             @Valid @RequestBody CreateChargeRuleRequest request,
             @AuthenticationPrincipal String userId,  // extracted from JWT by our filter
@@ -76,7 +76,7 @@ public class ChargeRuleController {
     @Operation(summary = "Get all charge rules",
             description = "[BILL-002] Returns paginated charge rules. Filterable by status and chargeType.")
     @GetMapping
-    @PreAuthorize("hasAnyRole('FINANCE_OFFICER', 'APARTMENT_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('FINANCE_OFFICER', 'APARTMENT_MANAGER')")
     public ResponseEntity<ApiResponse<Page<ChargeRuleResponse>>> getAllChargeRules(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) ChargeType chargeType,
@@ -100,7 +100,7 @@ public class ChargeRuleController {
     @Operation(summary = "Get a charge rule by ID",
             description = "[BILL-003] Retrieves a specific charge rule by its ID.")
     @GetMapping("/{chargeRuleId}")
-    @PreAuthorize("hasAnyRole('FINANCE_OFFICER', 'APARTMENT_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('FINANCE_OFFICER', 'APARTMENT_MANAGER')")
     public ResponseEntity<ApiResponse<ChargeRuleResponse>> getChargeRuleById(
             @PathVariable String chargeRuleId,
             HttpServletRequest httpRequest) {
@@ -120,7 +120,7 @@ public class ChargeRuleController {
     @Operation(summary = "Update a charge rule",
             description = "[BILL-004] Updates name, amount, and billing period. ChargeType cannot be changed.")
     @PutMapping("/{chargeRuleId}")
-    @PreAuthorize("hasRole('FINANCE_OFFICER')")
+    @PreAuthorize("hasAuthority('FINANCE_OFFICER')")
     public ResponseEntity<ApiResponse<ChargeRuleResponse>> updateChargeRule(
             @PathVariable String chargeRuleId,
             @Valid @RequestBody UpdateChargeRuleRequest request,
@@ -141,7 +141,7 @@ public class ChargeRuleController {
     @Operation(summary = "Activate or deactivate a charge rule",
             description = "[BILL-005] Deactivated rules are kept for audit. They are never deleted.")
     @PatchMapping("/{chargeRuleId}/status")
-    @PreAuthorize("hasRole('FINANCE_OFFICER')")
+    @PreAuthorize("hasAuthority('FINANCE_OFFICER')")
     public ResponseEntity<ApiResponse<ChargeRuleResponse>> updateChargeRuleStatus(
             @PathVariable String chargeRuleId,
             @Valid @RequestBody UpdateStatusRequest request,
@@ -162,7 +162,7 @@ public class ChargeRuleController {
     @Operation(summary = "Get all active charge rules by type",
             description = "[BILL-006] Returns all ACTIVE rules for a given charge type.")
     @GetMapping("/type/{chargeType}")
-    @PreAuthorize("hasAnyRole('FINANCE_OFFICER', 'APARTMENT_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('FINANCE_OFFICER', 'APARTMENT_MANAGER')")
     public ResponseEntity<ApiResponse<List<ChargeRuleResponse>>> getChargeRulesByType(
             @PathVariable ChargeType chargeType,
             HttpServletRequest httpRequest) {
