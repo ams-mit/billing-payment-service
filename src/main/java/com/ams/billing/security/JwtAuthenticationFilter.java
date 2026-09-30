@@ -64,7 +64,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     // Map each role to ROLE_FINANCE_OFFICER, ROLE_APARTMENT_MANAGER etc.
                     List<String> roles = jwtTokenProvider.extractRoles(token);
                     authorities = roles.stream()
-                            .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                            .map(SimpleGrantedAuthority::new)
                             .toList();
                     log.debug("User JWT authenticated: userId={}, roles={}", subject, roles);
                 }
