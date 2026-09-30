@@ -10,8 +10,14 @@ on:
       - main
       - dev
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 jobs:
   build-and-test:
+    name: Build and Test
     runs-on: ubuntu-latest
 
     steps:
@@ -25,10 +31,26 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Make mvnw executable
+        run: chmod +x ./mvnw
+
       - name: Run tests
-        run: ./mvnw clean test -B
+        id: tests
+        continue-on-error: true
+        run: ./mvnw clean test -B -Dspring.profiles.active=test
         env:
-          SPRING_PROFILES_ACTIVE: test
+          JWT_SECRET: test-secret-key-for-ci-only-not-production-256bits
+
+      - name: Build JAR
+        id: build
+        continue-on-error: true
+        run: ./mvnw package -DskipTests -B
+
+      - name: Secret scanning
+        id: secrets
+        continue-on-error: true
+        run: |
+          docker run -v ${{ github.workspace }}:/repo zricethezav/gitleaks:latest detect --source="/repo" --no-git -v --config="/repo/.gitleaks.toml"
 
       - name: Upload test report
         if: always()
@@ -36,3 +58,40 @@ jobs:
         with:
           name: surefire-reports
           path: target/surefire-reports/
+
+      - name: Post CI status report
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const testResult = '${{ steps.tests.outcome }}' === 'success' ? '✅ Passed' : '❌ Failed';
+            const buildResult = '${{ steps.build.outcome }}' === 'success' ? '✅ Passed' : '❌ Failed';
+            const secretsResult = '${{ steps.secrets.outcome }}' === 'success' ? '✅ Passed' : '❌ Failed';
+            const overall = (
+              '${{ steps.tests.outcome }}' === 'success' &&
+              '${{ steps.build.outcome }}' === 'success' &&
+              '${{ steps.secrets.outcome }}' === 'success'
+            ) ? '✅ Passed' : '❌ Failed';
+            const commit = context.sha.substring(0, 7);
+
+            const body = `🚀 **Billing Payment Service CI Status Report**
+
+            | Check | Result |
+            |---|---|
+            | Backend Tests | ${testResult} |
+            | Build | ${buildResult} |
+            | Secret Scanning | ${secretsResult} |
+
+            **Overall Pipeline Status:** ${overall}
+            **Commit:** \`${commit}\``;
+
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
+
+      - name: Fail job if any check failed
+        if: steps.tests.outcome != 'success' || steps.build.outcome != 'success' || steps.secrets.outcome != 'success'
+        run: exit 1
