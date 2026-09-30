@@ -45,7 +45,7 @@ public class InternalController {
      * when it detects type = service in the Gateway JWT.
      */
     @GetMapping("/balance/{unitId}")
-    @PreAuthorize("hasRole('SERVICE')")
+    @PreAuthorize("hasAuthority('SERVICE')")
     public ResponseEntity<ApiResponse<BalanceResponse>> getInternalBalance(
             @PathVariable String unitId,
             HttpServletRequest httpRequest) {

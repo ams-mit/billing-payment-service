@@ -55,8 +55,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 if ("service".equals(tokenType)) {
                     // Internal service-to-service call via Gateway
-                    // Authority: ROLE_SERVICE — used by internal endpoint @PreAuthorize
-                    authorities = List.of(new SimpleGrantedAuthority("ROLE_SERVICE"));
+                    // Authority: SERVICE — used by internal endpoint @PreAuthorize
+                    authorities = List.of(new SimpleGrantedAuthority("SERVICE"));
                     log.debug("Service JWT authenticated: callingService={}", subject);
 
                 } else {
