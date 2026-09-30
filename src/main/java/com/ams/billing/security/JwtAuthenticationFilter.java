@@ -45,38 +45,39 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain) throws ServletException, IOException {
 
         String token = extractToken(request);
+        log.info("Incoming request: {} {} | Token present: {}", request.getMethod(), request.getRequestURI(), StringUtils.hasText(token));
 
-        if (StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
-            try {
-                String tokenType = jwtTokenProvider.extractTokenType(token);
-                String subject   = jwtTokenProvider.extractSubject(token);
+        if (StringUtils.hasText(token)) {
+            if (jwtTokenProvider.validateToken(token)) {
+                try {
+                    String tokenType = jwtTokenProvider.extractTokenType(token);
+                    String subject   = jwtTokenProvider.extractSubject(token);
 
-                List<SimpleGrantedAuthority> authorities;
+                    List<SimpleGrantedAuthority> authorities;
 
-                if ("service".equals(tokenType)) {
-                    // Internal service-to-service call via Gateway
-                    // Authority: SERVICE — used by internal endpoint @PreAuthorize
-                    authorities = List.of(new SimpleGrantedAuthority("SERVICE"));
-                    log.debug("Service JWT authenticated: callingService={}", subject);
+                    if ("service".equals(tokenType)) {
+                        authorities = List.of(new SimpleGrantedAuthority("SERVICE"));
+                        log.info("Service JWT authenticated: callingService={}", subject);
+                    } else {
+                        List<String> roles = jwtTokenProvider.extractRoles(token);
+                        authorities = roles.stream()
+                                .map(SimpleGrantedAuthority::new)
+                                .toList();
+                        log.info("User JWT authenticated: userId={}, roles={}", subject, roles);
+                    }
 
-                } else {
-                    // User request via Gateway — type: "user"
-                    // Map each role to ROLE_FINANCE_OFFICER, ROLE_APARTMENT_MANAGER etc.
-                    List<String> roles = jwtTokenProvider.extractRoles(token);
-                    authorities = roles.stream()
-                            .map(SimpleGrantedAuthority::new)
-                            .toList();
-                    log.debug("User JWT authenticated: userId={}, roles={}", subject, roles);
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(subject, null, authorities);
+
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                    log.info("SecurityContext successfully set for subject: {}", subject);
+
+                } catch (Exception ex) {
+                    log.error("Failed to process Gateway JWT: {}", ex.getMessage());
+                    SecurityContextHolder.clearContext();
                 }
-
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(subject, null, authorities);
-
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-
-            } catch (Exception ex) {
-                log.warn("Failed to process Gateway JWT: {}", ex.getMessage());
-                SecurityContextHolder.clearContext();
+            } else {
+                log.warn("JWT Token validation failed for token: {}", token.substring(0, Math.min(token.length(), 15)) + "...");
             }
         }
 
