@@ -3,7 +3,7 @@
 AMS Group 3 — Billing, Utilities, and Payments  
 University of Kelaniya | Software Architecture and Process Models
 
-![CI](https://github.com/<org-name>/billing-payment-service/actions/workflows/ci.yml/badge.svg)
+
 
 ## Overview
 Handles charge rule management, invoice generation (with immutable line item snapshots),
