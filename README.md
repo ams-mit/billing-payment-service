@@ -15,11 +15,11 @@ payment recording, receipt generation, balance calculation, and financial report
 - **Health check:** http://localhost:8081/actuator/health
 
 ## Prerequisites
-- Java 21
+- Java 25
 - Maven 3.9+
 - MySQL 8 running locally (or via Docker)
 
-## Setup
+## Setup 
 
 ```bash
 # 1. Copy environment variables
